@@ -1,0 +1,5 @@
+
+useDynLib(TSHRC)
+
+export(twostage)
+

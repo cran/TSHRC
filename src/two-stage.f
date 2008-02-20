@@ -1,0 +1,566 @@
+CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
+C                                                                    C
+C   THIS IS A FORTRAN SOURCE CODE OF THE SUGGESTED TWO-STAGE         C
+C   PROCEDURE IN THE PAPER:                                          C
+C                                                                    C
+C   QIU, P., AND SHENG, J. (2008), "A Two-Stage Procedure For        C
+C     Comparing Hazard Rate Functions," JRSS-B, vol.70, 191-208.     C
+C                                                                    C
+C   IN THE PROCEDURE, THE CONVENTIONAL LOGRANK TEST AND THE PROPOSED C
+C   TEST FOR HANDLING THE CROSSING HAZARD RATES PROBLEM ARE USED IN  C
+C   ITS TWO STAGES.                                                  C
+C                                                                    C
+C   ORIGINAL PROGRAMMER:        JUN SHENG                            C
+C   WRITTEN DATE:               NOVEMBER 2005                        C
+C                                                                    C
+C   MODIFIED AND DOCUMENTED BY: PEIHUA QIU                           C
+C   MODIFICATION DATE:          AUGUST 2007                          C
+C                                                                    C
+C                                                                    C
+C     INPUT VARIABLES:                                               C
+C       WORK:      WORKING DIMENSION OF THE VARIABLES USED IN THE    C
+C                  FORTRAN-77 CODES. WORK SHOULD BE >= DATASIZE      C
+C       DATASIZE:  POOLED SAMPLE SIZE n=n_1+n_2                      C
+C       T:         POOLED OBSERVATION TIMES                          C
+C       DELTA:     CENSORING STATUS (0-CENSORED;1-UNCENSORED)        C
+C       GROUP:     TREATMENT GROUPS (0 OR 1)                         C
+C       BOOTSN:    BOOTSTRAP SAMPLE SIZE                             C
+C       ALPHA:     SIGNIFICANCE LEVEL                                C
+C       EPS:       EPSILON VALUE USED IN DEFINING V IN THE PAPER     C
+C                                                                    C
+C     OUTPUT VARIABLES:                                              C
+C       LRPV:      p-VALUE OF THE LOG-RANK TEST                      C
+C       MTPV:      p-VALUE OF THE SUGGESTED STAGE-II TEST            C
+C       TSPV:      p-VALUE OF THE TWO-STAGE TEST                     C
+C                                                                    C
+CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
+
+
+      SUBROUTINE TWOSTAGE(WORK,DATASIZE,T,DELTA,GP,BOOTSN,ALPHA,EPS,
+     +LRPV,MTPV,TSPV)
+
+
+      INTEGER DELTA(WORK), GP(WORK), L(2,WORK), D(2,WORK), N(2,WORK),
+     +   DELTA0(WORK), GP0(WORK), L0(2,WORK), D0(2,WORK), N0(2,WORK), 
+     +   NDT, N1, N2, NDT0, N10, N20, BOOTSN, I, J, NPLUS, NMINUS, 
+     +   IERROR, DATASIZE, WORK 
+
+      DOUBLE PRECISION  T(WORK), DT(WORK), WEIGHT(WORK), T0(WORK), 
+     +   DT0(WORK), ALPHA, ALPHA1, EPS, NULL, LRW, LRPV, MTW(BOOTSN), 
+     +   MTPV, TSPV
+
+      EXTERNAL rndstart, rndend
+
+      call rndstart()
+
+CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
+C     CALL SUBROUTINE "ARRANGEDATA()" TO ARRANGE THE DATA INTO A LIFETIME TABLE C
+CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
+
+      CALL ARRANGEDATA(WORK,DATASIZE,T,DELTA,GP, N1,N2,NDT,DT,N,D,L)
+
+
+CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
+C     CALL SUBROUTINE "LINRANK()" TO COMPUTE WEIGHTS OF THE LOG-RANK TEST, AND  C   
+C     THEN CALL SUBROUTINE "STATCAL()" TO COMPUTE THE p-VALUE "LRPV" OF THE     C
+C     CORRESPONDING METHOD.                                                     C
+CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
+
+      CALL LINRANK(WORK, NDT, WEIGHT)
+      CALL STATCAL(WORK, D, N, NDT, WEIGHT, LRW, LRPV)
+
+
+CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
+C     TO COMPUTE THE p-VALUE "MTPVBOOT" OF THE SUGGESTED PROCEDURE FOR HANDLING C 
+C     THE CROSSING HZARD RATES PROBLEM, and  THE p-VALUE "TSPV" OF THE TWO      C
+C     STAGE PROCEDURE.                                                          C
+C                                                                               C
+C           SUBROUTINES:                                                        C
+C             RESAMPLE1(): SUBROUTINE TO GENERATE BOOTSTRAP SAMPLES.            C
+C             MMANTEL():   SUBROUTINE TO COMPUTE WEIGHTS OF THE PROPOSED METHOD.C
+CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
+
+      NMINUS = 0
+      NPLUS = 0
+
+      DO 10 J = 1, BOOTSN
+
+         CALL RESAMPLE1(N1,N2,T,DELTA,GP, T0,DELTA0,GP0)         
+         CALL ARRANGEDATA(WORK,DATASIZE,T0,DELTA0,GP0, N10,N20,
+     +        NDT0,DT0,N0,D0,L0)  
+
+         CALL MMANTEL(WORK, D0, L0, N0, N10, N20, NDT0, EPS,  WEIGHT)
+         CALL STATCAL(WORK, D0, N0, NDT0, WEIGHT, MTW(J), NULL)
+
+         IF (MTW(J) .LT. 0D0) THEN
+            NMINUS = NMINUS + 1
+         ELSE
+            NPLUS = NPLUS + 1
+         END IF
+
+ 10   CONTINUE
+
+      MTPV = DBLE(MIN(NMINUS,NPLUS)) / DBLE(BOOTSN) * 2D0
+
+      ALPHA1 = 1D0 - SQRT(1D0-ALPHA)
+
+      IF (LRPV .LE. ALPHA1) THEN
+         TSPV=LRPV
+      ELSE
+         TSPV=ALPHA1+MTPV*(1D0-ALPHA1)
+      END IF
+
+      call rndend()
+
+      END 
+
+
+CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
+C     FINDING WEIGHTS FOR THE LINEAR-RANK (LOGRANK) TEST.      C
+C     NDT IS THE NUMBER OF DISTINCT EVENT TIMES.               C
+CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
+
+      SUBROUTINE LINRANK(WORK, NDT, WEIGHT)
+
+      INTEGER  NDT, I, WORK
+      DOUBLE PRECISION  WEIGHT(WORK)
+
+      DO 10 I=1, NDT
+         WEIGHT(I)=1D0
+ 10   CONTINUE
+
+      END 
+
+
+CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
+CC    FINDING WEIGHTS FOR THE SUGGESTED PROCEDURE FOR HANDLING THE CROSSING     CC
+CC    HAZARD RATES PROBLEM.                                                     CC
+CC    S:  K-M ESTIMATOR OF SURVIVAL FUNCTION OF EVENT TIMES                     CC
+CC    G:  ESTIMATOR OF SURVIVAL FUNCTION FOR CENSORING TIMES                    CC
+CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
+
+      SUBROUTINE MMANTEL(WORK, D, L, N, N1, N2, NDT, EPS,  WEIGHT)
+
+      INTEGER D(2,WORK),L(2,WORK),N(2,WORK),N1,N2,NDT,I,J,
+     +   CHP,LB,RB,WORK
+      DOUBLE PRECISION S(WORK), G(WORK), WEIGHT(WORK)
+      DOUBLE PRECISION W, WABS, NUM, DENOM, VAR(NDT), EPS
+
+      S(1) = 1D0 - DBLE(D(1,1)+D(2,1)) / DBLE(N(1,1)+N(2,1))
+      G(1) = 1D0 - DBLE(L(1,1)+L(2,1)) / DBLE(N1+N2)
+
+      DO 10 I=2, NDT
+         S(I) = S(I-1) * (1D0 - DBLE(D(1,I)+D(2,I)) / 
+     +          DBLE(N(1,I)+N(2,I)))
+         G(I) = G(I-1) * (1D0 - DBLE(L(1,I)+L(2,I)) / 
+     +          DBLE(N(1,I-1)+N(2,I-1))) 
+ 10   CONTINUE
+
+CCCCC LB IS D_EPSILON IN THE PAPER, RB IS D-D_EPSILON IN THE PAPER
+
+      WABS=0D0
+      LB=MAX(3,FLOOR(DBLE(NDT)*EPS))
+      RB=NDT-LB
+      CHP = 0
+
+      DO 20 I=LB, RB
+
+         NUM = G(1)*(S(1)-1D0)
+
+         DO 30 J=2, I
+            NUM = NUM + G(J)*(S(J)-S(J-1))
+ 30      CONTINUE
+
+         DENOM = 0D0
+
+         DO 40 J=I+1, NDT
+            DENOM = DENOM + G(J)*(S(J)-S(J-1))
+ 40      CONTINUE
+
+         DO 50 J=1, NDT
+            IF (J .LT. I) THEN 
+               WEIGHT(J)=-1D0
+            ELSE
+               WEIGHT(J)=NUM/DENOM
+            END IF
+ 50      CONTINUE
+
+         NUM=0D0
+         DENOM=0D0
+
+         DO 60 J=1, NDT
+
+            NUM=NUM+WEIGHT(J)*(DBLE(D(1,J))-DBLE(N(1,J))*
+     +          DBLE(D(1,J)+D(2,J))/DBLE(N(1,J)+N(2,J)))
+            IF (N(1,J)+N(2,J) .NE. 1) THEN
+               VAR(J)=DBLE(N(1,J))/DBLE(N(1,J)+N(2,J))*
+     +                (1D0-DBLE(N(1,J))/
+     +                DBLE(N(1,J)+N(2,J)))*DBLE(N(1,J)+
+     +                N(2,J)-D(1,J)-D(2,J))/
+     +                 DBLE(N(1,J)+N(2,J)-1)*DBLE(D(1,J)+D(2,J))
+            ELSE
+               VAR(J)=DBLE(N(1,J))/DBLE(N(1,J)+N(2,J))*
+     +                (1D0-DBLE(N(1,J))/
+     +                DBLE(N(1,J)+N(2,J)))*DBLE(D(1,J)+D(2,J))
+            END IF
+            DENOM=DENOM+WEIGHT(J)*WEIGHT(J)*VAR(J)
+
+ 60      CONTINUE
+
+         W=NUM/DSQRT(DENOM)
+
+         IF (DABS(W) .GT. WABS) THEN
+            WABS=DABS(W)
+            CHP=I
+         END IF
+
+ 20   CONTINUE
+
+      NUM = G(1)*(S(1)-1D0)
+
+      DO 70 J=2, CHP
+         NUM = NUM + G(J)*(S(J)-S(J-1))
+ 70   CONTINUE
+
+      DENOM = 0D0
+
+      DO 80 J=CHP+1, NDT
+         DENOM = DENOM + G(J)*(S(J)-S(J-1))
+ 80   CONTINUE
+
+      DO 90 I=1, NDT
+         IF (I .LT. CHP) THEN
+            WEIGHT(I)=-1D0
+         ELSE
+            WEIGHT(I)=NUM/DENOM
+         END IF
+ 90   CONTINUE
+
+      END 
+
+
+CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
+CC    SUBROUTINE FOR COMPUTING THE VALUES OF TEST STATISTICS AND CORRESPONDING  CC
+CC    p-VALUES FOR VARIOUS METHODS.                                             CC
+CC                                                                              CC
+CC    W  --- VALUE OF TEST STATISTIC                                            CC
+CC    PVAL2 --- TWO-SIDED p-VALUE                                               CC
+CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC      
+
+      SUBROUTINE STATCAL(WORK, D, N, NDT, WEIGHT, W, PVAL2)
+
+      INTEGER I, D(2, WORK), N(2, WORK), NDT, WORK
+      DOUBLE PRECISION WEIGHT(WORK),NUM,DENOM,VAR(NDT),
+     +   W,PVAL1,PVAL2,PNORM
+
+      NUM=0D0
+      DENOM=0D0
+
+      DO 10 I=1, NDT
+
+         NUM=NUM+WEIGHT(I)*(DBLE(D(1,I))-DBLE(N(1,I))*DBLE(D(1,I)+
+     +        D(2,I))/DBLE(N(1,I)+N(2,I)))
+
+         IF (N(1,I)+N(2,I) .NE. 1) THEN
+            VAR(I)=DBLE(N(1,I))/DBLE(N(1,I)+N(2,I))*
+     +             (1D0-DBLE(N(1,I))/
+     +             DBLE(N(1,I)+N(2,I)))*DBLE(N(1,I)+
+     +             N(2,I)-D(1,I)-D(2,I))/
+     +             DBLE(N(1,I)+N(2,I)-1)*DBLE(D(1,I)+D(2,I))
+         ELSE
+            VAR(I)=DBLE(N(1,I))/DBLE(N(1,I)+N(2,I))*
+     +             (1D0-DBLE(N(1,I))/
+     +             DBLE(N(1,I)+N(2,I)))*DBLE(D(1,I)+D(2,I))
+         END IF
+
+         DENOM=DENOM+WEIGHT(I)*WEIGHT(I)*VAR(I)
+
+ 10   CONTINUE
+
+      W=NUM/DSQRT(DENOM)
+      PVAL1=1D0-PNORM(DABS(W))
+      PVAL2=2D0*PVAL1
+
+      END 
+
+
+CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
+CC    REARRANGING THE DATA INTO A LIFETIME TABLE                              CC
+CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
+
+      SUBROUTINE ARRANGEDATA(WORK,DATASIZE,T,DELTA,GP,N1,N2,
+     +   NDT,DT,N,D,L)
+
+      INTEGER DATASIZE,DELTA(WORK),GP(WORK),L(2,WORK),D(2,WORK), 
+     +   N(2,WORK),NDT,N1,N2,WORK
+      DOUBLE PRECISION T(WORK),DT(WORK)
+
+      CALL SORTBYT(WORK,DATASIZE, T, DELTA, GP)
+      CALL COUNT(WORK,DATASIZE, GP, N1, N2)
+      CALL TLDN(WORK,DATASIZE,T,DELTA,GP,N1,N2,L,D,DT,N,NDT)
+
+      END 
+
+
+CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
+CC    COUNTING THE NUMBER OF OBSERVATIONS FOR EACH GROUP      CC
+CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
+
+      SUBROUTINE COUNT(WORK,DATASIZE, GP, N1, N2)
+
+      INTEGER DATASIZE, GP(WORK), N1, N2, I, WORK
+
+      N1=0
+      N2=0
+
+      DO 10 I=1, DATASIZE
+         IF (GP(I) .EQ. 1) THEN
+            N1=N1+1
+         ELSE
+            N2=N2+1
+         END IF
+ 10   CONTINUE
+
+      END 
+
+
+CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
+CC    SORTING THE DATASET BY TIME            CC
+CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
+
+      SUBROUTINE SORTBYT(WORK,DATASIZE,T,DELTA,GP)
+
+      INTEGER DATASIZE,DELTA(WORK),GP(WORK),I,J,
+     +   DTEMP,GTEMP,WORK
+      DOUBLE PRECISION T(WORK), TTEMP
+
+      DO 10 I=1, DATASIZE-1
+         DO 20 J=I+1, DATASIZE
+
+            IF (T(J) .LT. T(I)) THEN
+               TTEMP=T(J)
+               DTEMP=DELTA(J)
+               GTEMP=GP(J)
+               T(J)=T(I)
+               DELTA(J)=DELTA(I)
+               GP(J)=GP(I)
+               T(I)=TTEMP
+               DELTA(I)=DTEMP
+               GP(I)=GTEMP
+            ENDIF
+
+            IF (T(J) .EQ. T(I)) THEN
+               IF (DELTA(J) .GT. DELTA(I)) THEN
+                  TTEMP=T(J)
+                  DTEMP=DELTA(J)
+                  GTEMP=GP(J)
+                  T(J)=T(I)
+                  DELTA(J)=DELTA(I)
+                  GP(J)=GP(I)
+                  T(I)=TTEMP
+                  DELTA(I)=DTEMP
+                  GP(I)=GTEMP
+               END IF
+
+               IF (DELTA(J) .EQ. DELTA(I)) THEN
+                  IF (GP(J) .LT. GP(I)) THEN
+                     GTEMP = GP(J)
+                     GP(J) = GP(I)
+                     GP(I) = GTEMP
+                  END IF
+               END IF
+            END IF
+
+ 20      CONTINUE
+ 10   CONTINUE
+
+      END 
+
+
+CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
+CC    SORTING THE DATASET BY GROUP            CC
+CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
+
+      SUBROUTINE SORTBYGP(WORK,DATASIZE,T,DELTA,GP)
+
+      INTEGER  DATASIZE,DELTA(WORK),GP(WORK),I,J,
+     +   DTEMP,GTEMP,WORK
+      DOUBLE PRECISION  T(WORK), TTEMP
+
+      DO 10 I = 1,(DATASIZE-1)
+         DO 20 J = (I+1),DATASIZE
+
+            IF (GP(I) .LT. GP(J)) THEN
+               TTEMP = T(I)
+               DTEMP = DELTA(I)
+               GTEMP = GP(I)
+               T(I) = T(J)
+               DELTA(I) = DELTA(J)
+               GP(I) = GP(J)
+               T(J) = TTEMP
+               DELTA(J) = DTEMP
+               GP(J) = GTEMP
+            END IF
+
+ 20      CONTINUE
+ 10   CONTINUE
+
+      END 
+
+
+CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
+CC    ARRANGING THE DATASET INTO THE FORM OF A LIFETABLE            CC
+CC    N:   NUMBER OF SUBJECTS AT RISK AT THE BEGINNING OF TIME T_I  CC
+CC    D:   NUMBER OF EVENTS AT TIME T_I                             CC
+CC    L:   NUMBER OF SUBJECTS CENSORED BETWEEN T_(I-1) AND T_I      CC
+CC    NDT: NUMBER OF DISTINCT EVENT TIMES                           CC
+CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
+
+      SUBROUTINE TLDN(WORK,DATASIZE,T,DELTA,GP,N1,N2,L,D,DT,N,NDT)
+
+      INTEGER DATASIZE, DELTA(WORK), GP(WORK), N1,N2,WORK,
+     +   L(2,WORK), D(2,WORK), N(2,WORK), NDT, PNTR, I, J
+      DOUBLE PRECISION T(WORK), DT(WORK)       
+
+      PNTR=1
+      N(1,1)=N1
+      N(2,1)=N2
+
+      DO 10 I=1, DATASIZE
+         DO J=1, 2
+            L(J,I)=0
+            D(J,I)=0
+         END DO
+ 10   CONTINUE
+
+      DO 20 I=1, DATASIZE
+
+         IF (DELTA(I) .EQ. 0) THEN
+            IF (GP(I) .EQ. 1) THEN
+               L(1,PNTR)=L(1,PNTR)+1
+            ELSE
+               L(2,PNTR)=L(2,PNTR)+1
+            ENDIF
+         ELSE
+            DT(PNTR)=T(I)
+            IF (GP(I) .EQ. 1) THEN 
+               D(1,PNTR)=D(1,PNTR)+1
+            ELSE
+               D(2,PNTR)=D(2,PNTR)+1
+            END IF
+
+            IF (I .NE. DATASIZE) THEN
+               IF (T(I) .NE. T(I+1) .OR. DELTA(I+1) .EQ. 0) THEN
+                  PNTR=PNTR+1
+               END IF
+            END IF
+         END IF
+
+ 20   CONTINUE
+
+      IF ((D(1,PNTR) .EQ. 0) .AND. (D(2,PNTR) .EQ. 0)) THEN
+         NDT=PNTR-1
+      ELSE
+         NDT=PNTR
+      END IF
+
+      DO 30 J=1,2
+         N(J,1)=N(J,1)-L(J,1)
+ 30   CONTINUE
+
+      DO 40 I=2,NDT
+         DO 50 J=1,2
+            N(J,I)=N(J,I-1)-D(J,I-1)-L(J,I)
+ 50      CONTINUE
+ 40   CONTINUE
+
+      END 
+
+
+CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
+CC    COMPUTING THE CDF OF THE STANDARD NORMAL DISTRIBUTION               CC    
+CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
+
+      DOUBLE PRECISION FUNCTION PNORM(Z)
+
+      DOUBLE PRECISION  Z, X
+
+      X=DABS(Z)
+      X=(((((.0000053830*X+.0000488906)*X+.0000380036)*X+
+     +  .0032776263)*X+.0211410061)*X+.0498673470)*X+1D0
+      X=X*X
+      X=X*X
+      X=X*X
+      X=X*X
+      X=1D0-5D-1/X
+
+      IF (Z .LT. 0D0) THEN 
+         PNORM=1D0-X
+      ELSE
+         PNORM=X
+      END IF
+
+      END
+
+CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
+CC    OBTAINING BOOTSTRAP SAMPLES FOR BOTH THE TREATMENT AND CONTROL GROUPS     CC
+CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
+
+      SUBROUTINE RESAMPLE1(N1,N2,T,DELTA,GP, T0,DELTA0,GP0)
+
+      INTEGER  N1, N2, I, X, DELTA(N1+N2),GP(N1+N2),DELTA0(N1+N2),
+     +   GP0(N1+N2)
+      DOUBLE PRECISION  T(N1+N2), T0(N1+N2), TEMP
+
+      DOUBLE PRECISION unifrnd
+      EXTERNAL unifrnd
+
+      DO 10 I = 1, N1
+
+         X = unifrnd() * N1
+         X = X + 1
+         T0(I) = T(X)
+         DELTA0(I) = DELTA(X)
+         GP0(I) = GP(X)
+
+ 10   CONTINUE
+
+      DO 20 I = (N1 + 1), (N1 + N2)
+
+         X = N1 + unifrnd() * N2
+         X = X + 1
+         T0(I) = T(X)
+         DELTA0(I) = DELTA(X)
+         GP0(I) = GP(X)
+
+ 20   CONTINUE
+
+      END 
+
+
+CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
+CC    SUBROUTINE TO GENERATE UNIFORM RANDOM NUMBERS IN THE INTERVAL [0,1]. CC
+CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
+
+      SUBROUTINE RANDOM(RANNUM)
+
+      INTEGER M, CONST1
+      PARAMETER (CONST1=2147483647)
+
+      REAL RANNUM, CONST2
+      PARAMETER (CONST2=.4656613E-9)
+
+      SAVE
+      DATA M /0/
+
+   10 CONTINUE
+
+      IF (M .EQ. 0) M=INT(RANNUM)
+      M=M*65539
+      IF (M .LT. 0) M=(M+1)+CONST1
+      RANNUM=M*CONST2
+
+      IF (RANNUM .LT. 0.0 .OR. RANNUM .GT. 1.0) GO TO 10
+
+      END 
+
