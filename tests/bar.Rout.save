@@ -1,0 +1,38 @@
+
+R version 2.6.2 (2008-02-08)
+Copyright (C) 2008 The R Foundation for Statistical Computing
+ISBN 3-900051-07-0
+
+R is free software and comes with ABSOLUTELY NO WARRANTY.
+You are welcome to redistribute it under certain conditions.
+Type 'license()' or 'licence()' for distribution details.
+
+R is a collaborative project with many contributors.
+Type 'contributors()' for more information and
+'citation()' on how to cite R or R packages in publications.
+
+Type 'demo()' for some demos, 'help()' for on-line help, or
+'help.start()' for an HTML browser interface to help.
+Type 'q()' to quit R.
+
+> 
+>  library(TSHRC)
+> 
+>  data(rats)
+>  attach(rats)
+> 
+>  set.seed(42)
+> 
+>  twostage(time, delta, group, nboot = 2500)
+       LRPV        MTPV        TSPV 
+0.003371660 0.060000000 0.003371660 
+> 
+>  twostage(time, delta, group, nboot = 2500)
+       LRPV        MTPV        TSPV 
+0.003371660 0.052800000 0.003371660 
+> 
+>  twostage(time, delta, group, nboot = 2500)
+       LRPV        MTPV        TSPV 
+0.003371660 0.049600000 0.003371660 
+> 
+> 

@@ -1,0 +1,7 @@
+
+ 0.1    First ship to CRAN
+
+ 0.1-1  Added two more tests.
+
+ 0.1-2  Fixed fortran errors found by SunPro complier and forwarded by
+        Brian Ripley.
