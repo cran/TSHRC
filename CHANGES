@@ -5,3 +5,5 @@
 
  0.1-2  Fixed fortran errors found by SunPro complier and forwarded by
         Brian Ripley.
+
+ 0.1-3  Fixed licence to "MIT + file LICENCE" as instructed by Brian Ripley

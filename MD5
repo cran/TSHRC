@@ -1,0 +1,16 @@
+f88e56f054525734b39dd059397fba4c *CHANGES
+ccc354fd83665a2ddb1fec3d2b71211a *DESCRIPTION
+ba3145b5a2a4e20b71cc079dce73b887 *LICENSE
+4b7bcf4c704579af17e3042090809ded *NAMESPACE
+f105593ff167641049be7d9af874e5b6 *R/twostage.R
+0e60a4469cd9f41b391250395a72a408 *data/rats.txt.gz
+51b9c8d85c482ded207d3786f0f7defc *man/rats.Rd
+b3e7ecf51676cff50b2ba67e65534a3b *man/twostage.Rd
+d5fbd7a5b58d56cd8c5cdbf631bf292d *src/crandom.c
+faa26d55d4a1cd47135051efc004fcd0 *src/two-stage.f
+e837ef1af7f2ac83b2233242ddac8fa9 *tests/bar.R
+d72a5b34268ce20e619eacad98c4b213 *tests/bar.Rout.save
+0122d35f5d9aba5d79b5dbc638789fa5 *tests/foo.R
+9b2e374ea837e26c494133174bb128d9 *tests/foo.Rout.save
+3969c33e3e86a9a493661b83cb0b88a0 *tests/rats.R
+1118370a5378e47ea91e19cbf42e5f8e *tests/rats.Rout.save
