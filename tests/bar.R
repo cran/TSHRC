@@ -1,6 +1,8 @@
 
  library(TSHRC)
 
+ options(digits=4) # avoid rounding differences
+
  data(rats)
  attach(rats)
 

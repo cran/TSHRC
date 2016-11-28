@@ -1,6 +1,8 @@
 
  library(TSHRC)
 
+ options(digits=4) # avoid rounding differences
+
  n <- 200
 
  set.seed(42)

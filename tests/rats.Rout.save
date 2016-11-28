@@ -1,7 +1,7 @@
 
-R version 2.6.2 (2008-02-08)
-Copyright (C) 2008 The R Foundation for Statistical Computing
-ISBN 3-900051-07-0
+R version 3.3.1 (2016-06-21) -- "Bug in Your Hair"
+Copyright (C) 2016 The R Foundation for Statistical Computing
+Platform: i686-pc-linux-gnu (32-bit)
 
 R is free software and comes with ABSOLUTELY NO WARRANTY.
 You are welcome to redistribute it under certain conditions.
@@ -19,9 +19,14 @@ Type 'q()' to quit R.
 >  library(TSHRC)
 >  data(rats)
 > 
+>  options(digits=4) # avoid rounding differences
+> 
 >  set.seed(42)
 >  twostage(rats$time, rats$delta, rats$group, nboot = 1e3)
-       LRPV        MTPV        TSPV 
-0.003371660 0.058000000 0.003371660 
+    LRPV     MTPV     TSPV 
+0.003372 0.058000 0.003372 
 > 
 > 
+> proc.time()
+   user  system elapsed 
+  0.312   0.028   0.332 
