@@ -22,7 +22,7 @@ twostage <- function(time, delta, group, nboot, alpha = 0.05, eps = 0.1) {
     stopifnot(0 < alpha & alpha < 1)
     stopifnot(0 < eps & eps < 1)
 
-    out <- .Fortran("TWOSTAGE",
+    out <- .Fortran(C_TWOSTAGE,
         WORK = as.integer(n),
         DATASIZE = as.integer(n),
         T = as.double(time),
@@ -33,8 +33,7 @@ twostage <- function(time, delta, group, nboot, alpha = 0.05, eps = 0.1) {
         EPS = as.double(eps),
         LRPV = double(1),
         MTPV = double(1),
-        TSPV = double(1),
-        PACKAGE = "TSHRC")
+        TSPV = double(1))
 
     result <- c(out$LRPV, out$MTPV, out$TSPV)
     names(result) <- c("LRPV", "MTPV", "TSPV")

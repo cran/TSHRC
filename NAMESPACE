@@ -1,5 +1,5 @@
 
-useDynLib(TSHRC)
+useDynLib(TSHRC, .registration = TRUE, .fixes = "C_")
 
 export(twostage)
 
