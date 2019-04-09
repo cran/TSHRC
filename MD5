@@ -1,12 +1,12 @@
 f88e56f054525734b39dd059397fba4c *CHANGES
-68462b9fe3f4737ad00dfabae4b37153 *DESCRIPTION
+b48a446087d530a07d34a5cbf5239a98 *DESCRIPTION
 820b102bec776e33feca7b7aa26352b6 *LICENSE
 593f0f03b89e09ce6379ee970a73206d *NAMESPACE
 887b0440f7ad1c0b51089b487019c80c *R/twostage.R
 0e60a4469cd9f41b391250395a72a408 *data/rats.txt.gz
 51b9c8d85c482ded207d3786f0f7defc *man/rats.Rd
 b3e7ecf51676cff50b2ba67e65534a3b *man/twostage.Rd
-3a6bcca01369cd5acbda1b700b993285 *src/Makevars
+db6be1f587b4504e17256286cb3f240b *src/Makevars
 d5fbd7a5b58d56cd8c5cdbf631bf292d *src/crandom.c
 16c277c11ec49a99edcaf9dd98ea0969 *src/init.c
 15633fa54a3368db1f94835d1cbbe1cb *src/tshrc.h
